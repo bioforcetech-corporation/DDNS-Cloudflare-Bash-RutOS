@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 ###  Create .update-cloudflare-dns.log file of the last run for debug
 parent_path="$(dirname "${BASH_SOURCE[0]}")"
@@ -61,12 +61,14 @@ if [ "${what_ip}" == "external" ]; then
   echo "==> External IP is: $ip"
 fi
 
+
 ### Get Internal ip from primary interface
 if [ "${what_ip}" == "internal" ]; then
   ### Check if "IP" command is present, get the ip from interface
   if which ip >/dev/null; then
     ### "ip route get" (linux)
-    interface=$(ip route get 1.1.1.1 | awk '/dev/ { print $5 }')
+    interface=$(ip route get 1.1.1.1 | awk '/dev/ { print $3 }')
+#    interface=$(ip route get 1.1.1.1 | awk '/dev/ { print $5 }')
     ip=$(ip -o -4 addr show ${interface} scope global | awk '{print $4;}' | cut -d/ -f 1)
   ### if no "IP" command use "ifconfig", get the ip from interface
   else
@@ -75,11 +77,14 @@ if [ "${what_ip}" == "internal" ]; then
     ip=$(ifconfig ${interface} | grep 'inet ' | awk '{print $2}')
   fi
   if [ -z "$ip" ]; then
-    echo "Error! Can't read ip from ${interface}"
+    echo "Error! Can't read ip from internal"
+#    echo "Error! Can't read ip from ${interface}"
     exit 0
   fi
-  echo "==> Internal ${interface} IP is: $ip"
+  echo "==> Internal IP is: $ip"
+#  echo "==> Internal ${interface} IP is: $ip"
 fi
+
 
 ### Build coma separated array fron dns_record parameter to update multiple A records
 IFS=',' read -d '' -ra dns_records <<<"$dns_record,"
@@ -91,7 +96,8 @@ for record in "${dns_records[@]}"; do
   if [ "${proxied}" == "false" ]; then
     ### Check if "nsloopup" command is present
     if which nslookup >/dev/null; then
-      dns_record_ip=$(nslookup ${record} 1.1.1.1 | awk '/Address/ { print $2 }' | sed -n '2p')
+      dns_record_ip=$(nslookup ${record} 1.1.1.1 | awk '/Address/ { print $3 }' | sed -n '2p')
+#      dns_record_ip=$(nslookup ${record} 1.1.1.1 | awk '/Address/ { print $2 }' | sed -n '2p')
     else
       ### if no "nslookup" command use "host" command
       dns_record_ip=$(host -t A ${record} 1.1.1.1 | awk '/has address/ { print $4 }' | sed -n '1p')
